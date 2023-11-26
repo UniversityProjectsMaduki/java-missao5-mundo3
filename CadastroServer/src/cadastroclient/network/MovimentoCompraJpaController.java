@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package cadastroclient.network;
 
 import cadastroclient.network.exceptions.NonexistentEntityException;
@@ -19,10 +15,7 @@ import cadastroserver.model.PessoaJuridica;
 import cadastroserver.model.Produto;
 import cadastroserver.model.Usuario;
 
-/**
- *
- * @author Madu
- */
+
 public class MovimentoCompraJpaController implements Serializable {
 
     public MovimentoCompraJpaController(EntityManagerFactory emf) {

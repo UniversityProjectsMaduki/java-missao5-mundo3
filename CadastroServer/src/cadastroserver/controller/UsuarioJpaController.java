@@ -1,86 +1,69 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package cadastroserver.controller;
 
 import cadastroserver.controller.exceptions.NonexistentEntityException;
 import cadastroserver.controller.exceptions.PreexistingEntityException;
+import cadastroserver.model.Usuario;
+import cadastroserver.model.MovimentoCompra;
+import cadastroserver.model.MovimentoVenda;
+
 import java.io.Serializable;
-import javax.persistence.Query;
-import javax.persistence.EntityNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
+import javax.persistence.*;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
-import cadastroserver.model.MovimentoVenda;
-import java.util.ArrayList;
-import java.util.Collection;
-import cadastroserver.model.MovimentoCompra;
-import cadastroserver.model.Usuario;
-import java.util.List;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 
-/**
- *
- * @author Madu
- */
 public class UsuarioJpaController implements Serializable {
+
+    private EntityManagerFactory emf;
 
     public UsuarioJpaController(EntityManagerFactory emf) {
         this.emf = emf;
     }
-    private EntityManagerFactory emf = null;
 
     public EntityManager getEntityManager() {
         return emf.createEntityManager();
     }
 
     public void create(Usuario usuario) throws PreexistingEntityException, Exception {
-        if (usuario.getMovimentoVendaCollection() == null) {
-            usuario.setMovimentoVendaCollection(new ArrayList<MovimentoVenda>());
-        }
         if (usuario.getMovimentoCompraCollection() == null) {
-            usuario.setMovimentoCompraCollection(new ArrayList<MovimentoCompra>());
+            usuario.setMovimentoCompraCollection(new ArrayList<>());
+        }
+        if (usuario.getMovimentoVendaCollection() == null) {
+            usuario.setMovimentoVendaCollection(new ArrayList<>());
         }
         EntityManager em = null;
         try {
             em = getEntityManager();
             em.getTransaction().begin();
-            Collection<MovimentoVenda> attachedMovimentoVendaCollection = new ArrayList<MovimentoVenda>();
-            for (MovimentoVenda movimentoVendaCollectionMovimentoVendaToAttach : usuario.getMovimentoVendaCollection()) {
-                movimentoVendaCollectionMovimentoVendaToAttach = em.getReference(movimentoVendaCollectionMovimentoVendaToAttach.getClass(), movimentoVendaCollectionMovimentoVendaToAttach.getIdMovimentoVenda());
-                attachedMovimentoVendaCollection.add(movimentoVendaCollectionMovimentoVendaToAttach);
+
+            usuario = em.merge(usuario);
+
+            for (MovimentoCompra movimentoCompra : usuario.getMovimentoCompraCollection()) {
+                Usuario oldUsuarioOfMovimentoCompra = movimentoCompra.getUsuario();
+                movimentoCompra.setUsuario(usuario);
+                movimentoCompra = em.merge(movimentoCompra);
+                if (oldUsuarioOfMovimentoCompra != null) {
+                    oldUsuarioOfMovimentoCompra.getMovimentoCompraCollection().remove(movimentoCompra);
+                    em.merge(oldUsuarioOfMovimentoCompra);
+                }
             }
-            usuario.setMovimentoVendaCollection(attachedMovimentoVendaCollection);
-            Collection<MovimentoCompra> attachedMovimentoCompraCollection = new ArrayList<MovimentoCompra>();
-            for (MovimentoCompra movimentoCompraCollectionMovimentoCompraToAttach : usuario.getMovimentoCompraCollection()) {
-                movimentoCompraCollectionMovimentoCompraToAttach = em.getReference(movimentoCompraCollectionMovimentoCompraToAttach.getClass(), movimentoCompraCollectionMovimentoCompraToAttach.getIdMovimentoCompra());
-                attachedMovimentoCompraCollection.add(movimentoCompraCollectionMovimentoCompraToAttach);
+
+            for (MovimentoVenda movimentoVenda : usuario.getMovimentoVendaCollection()) {
+                Usuario oldUsuarioOfMovimentoVenda = movimentoVenda.getUsuario();
+                movimentoVenda.setUsuario(usuario);
+                movimentoVenda = em.merge(movimentoVenda);
+                if (oldUsuarioOfMovimentoVenda != null) {
+                    oldUsuarioOfMovimentoVenda.getMovimentoVendaCollection().remove(movimentoVenda);
+                    em.merge(oldUsuarioOfMovimentoVenda);
+                }
             }
-            usuario.setMovimentoCompraCollection(attachedMovimentoCompraCollection);
+
             em.persist(usuario);
-            for (MovimentoVenda movimentoVendaCollectionMovimentoVenda : usuario.getMovimentoVendaCollection()) {
-                Usuario oldIdOperadorOfMovimentoVendaCollectionMovimentoVenda = movimentoVendaCollectionMovimentoVenda.getIdOperador();
-                movimentoVendaCollectionMovimentoVenda.setIdOperador(usuario);
-                movimentoVendaCollectionMovimentoVenda = em.merge(movimentoVendaCollectionMovimentoVenda);
-                if (oldIdOperadorOfMovimentoVendaCollectionMovimentoVenda != null) {
-                    oldIdOperadorOfMovimentoVendaCollectionMovimentoVenda.getMovimentoVendaCollection().remove(movimentoVendaCollectionMovimentoVenda);
-                    oldIdOperadorOfMovimentoVendaCollectionMovimentoVenda = em.merge(oldIdOperadorOfMovimentoVendaCollectionMovimentoVenda);
-                }
-            }
-            for (MovimentoCompra movimentoCompraCollectionMovimentoCompra : usuario.getMovimentoCompraCollection()) {
-                Usuario oldIdOperadorOfMovimentoCompraCollectionMovimentoCompra = movimentoCompraCollectionMovimentoCompra.getIdOperador();
-                movimentoCompraCollectionMovimentoCompra.setIdOperador(usuario);
-                movimentoCompraCollectionMovimentoCompra = em.merge(movimentoCompraCollectionMovimentoCompra);
-                if (oldIdOperadorOfMovimentoCompraCollectionMovimentoCompra != null) {
-                    oldIdOperadorOfMovimentoCompraCollectionMovimentoCompra.getMovimentoCompraCollection().remove(movimentoCompraCollectionMovimentoCompra);
-                    oldIdOperadorOfMovimentoCompraCollectionMovimentoCompra = em.merge(oldIdOperadorOfMovimentoCompraCollectionMovimentoCompra);
-                }
-            }
             em.getTransaction().commit();
         } catch (Exception ex) {
-            if (findUsuario(usuario.getIdOperador()) != null) {
-                throw new PreexistingEntityException("Usuario " + usuario + " already exists.", ex);
+            if (findUsuarioByLogin(usuario.getNome(), usuario.getSenha()) != null) {
+                throw new PreexistingEntityException("Usuário " + usuario.getNome() + " já existe.", ex);
             }
             throw ex;
         } finally {
@@ -95,67 +78,33 @@ public class UsuarioJpaController implements Serializable {
         try {
             em = getEntityManager();
             em.getTransaction().begin();
-            Usuario persistentUsuario = em.find(Usuario.class, usuario.getIdOperador());
-            Collection<MovimentoVenda> movimentoVendaCollectionOld = persistentUsuario.getMovimentoVendaCollection();
-            Collection<MovimentoVenda> movimentoVendaCollectionNew = usuario.getMovimentoVendaCollection();
-            Collection<MovimentoCompra> movimentoCompraCollectionOld = persistentUsuario.getMovimentoCompraCollection();
-            Collection<MovimentoCompra> movimentoCompraCollectionNew = usuario.getMovimentoCompraCollection();
-            Collection<MovimentoVenda> attachedMovimentoVendaCollectionNew = new ArrayList<MovimentoVenda>();
-            for (MovimentoVenda movimentoVendaCollectionNewMovimentoVendaToAttach : movimentoVendaCollectionNew) {
-                movimentoVendaCollectionNewMovimentoVendaToAttach = em.getReference(movimentoVendaCollectionNewMovimentoVendaToAttach.getClass(), movimentoVendaCollectionNewMovimentoVendaToAttach.getIdMovimentoVenda());
-                attachedMovimentoVendaCollectionNew.add(movimentoVendaCollectionNewMovimentoVendaToAttach);
+
+            Usuario persistentUsuario = em.find(Usuario.class, usuario.getUsuario());
+            List<MovimentoVenda> movimentoVendaCollectionOld = new ArrayList<>(persistentUsuario.getMovimentoVendaCollection());
+            List<MovimentoVenda> movimentoVendaCollectionNew = new ArrayList<>(usuario.getMovimentoVendaCollection());
+            List<MovimentoCompra> movimentoCompraCollectionOld = new ArrayList<>(persistentUsuario.getMovimentoCompraCollection());
+            List<MovimentoCompra> movimentoCompraCollectionNew = new ArrayList<>(usuario.getMovimentoCompraCollection());
+
+            // Atualizar as referências para movimentos de venda
+            for (MovimentoVenda movimentoVenda : movimentoVendaCollectionNew) {
+                movimentoVenda.setUsuario(usuario);
+                movimentoVenda = em.merge(movimentoVenda);
             }
-            movimentoVendaCollectionNew = attachedMovimentoVendaCollectionNew;
-            usuario.setMovimentoVendaCollection(movimentoVendaCollectionNew);
-            Collection<MovimentoCompra> attachedMovimentoCompraCollectionNew = new ArrayList<MovimentoCompra>();
-            for (MovimentoCompra movimentoCompraCollectionNewMovimentoCompraToAttach : movimentoCompraCollectionNew) {
-                movimentoCompraCollectionNewMovimentoCompraToAttach = em.getReference(movimentoCompraCollectionNewMovimentoCompraToAttach.getClass(), movimentoCompraCollectionNewMovimentoCompraToAttach.getIdMovimentoCompra());
-                attachedMovimentoCompraCollectionNew.add(movimentoCompraCollectionNewMovimentoCompraToAttach);
+
+            // Atualizar as referências para movimentos de compra
+            for (MovimentoCompra movimentoCompra : movimentoCompraCollectionNew) {
+                movimentoCompra.setUsuario(usuario);
+                movimentoCompra = em.merge(movimentoCompra);
             }
-            movimentoCompraCollectionNew = attachedMovimentoCompraCollectionNew;
-            usuario.setMovimentoCompraCollection(movimentoCompraCollectionNew);
+
             usuario = em.merge(usuario);
-            for (MovimentoVenda movimentoVendaCollectionOldMovimentoVenda : movimentoVendaCollectionOld) {
-                if (!movimentoVendaCollectionNew.contains(movimentoVendaCollectionOldMovimentoVenda)) {
-                    movimentoVendaCollectionOldMovimentoVenda.setIdOperador(null);
-                    movimentoVendaCollectionOldMovimentoVenda = em.merge(movimentoVendaCollectionOldMovimentoVenda);
-                }
-            }
-            for (MovimentoVenda movimentoVendaCollectionNewMovimentoVenda : movimentoVendaCollectionNew) {
-                if (!movimentoVendaCollectionOld.contains(movimentoVendaCollectionNewMovimentoVenda)) {
-                    Usuario oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda = movimentoVendaCollectionNewMovimentoVenda.getIdOperador();
-                    movimentoVendaCollectionNewMovimentoVenda.setIdOperador(usuario);
-                    movimentoVendaCollectionNewMovimentoVenda = em.merge(movimentoVendaCollectionNewMovimentoVenda);
-                    if (oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda != null && !oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda.equals(usuario)) {
-                        oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda.getMovimentoVendaCollection().remove(movimentoVendaCollectionNewMovimentoVenda);
-                        oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda = em.merge(oldIdOperadorOfMovimentoVendaCollectionNewMovimentoVenda);
-                    }
-                }
-            }
-            for (MovimentoCompra movimentoCompraCollectionOldMovimentoCompra : movimentoCompraCollectionOld) {
-                if (!movimentoCompraCollectionNew.contains(movimentoCompraCollectionOldMovimentoCompra)) {
-                    movimentoCompraCollectionOldMovimentoCompra.setIdOperador(null);
-                    movimentoCompraCollectionOldMovimentoCompra = em.merge(movimentoCompraCollectionOldMovimentoCompra);
-                }
-            }
-            for (MovimentoCompra movimentoCompraCollectionNewMovimentoCompra : movimentoCompraCollectionNew) {
-                if (!movimentoCompraCollectionOld.contains(movimentoCompraCollectionNewMovimentoCompra)) {
-                    Usuario oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra = movimentoCompraCollectionNewMovimentoCompra.getIdOperador();
-                    movimentoCompraCollectionNewMovimentoCompra.setIdOperador(usuario);
-                    movimentoCompraCollectionNewMovimentoCompra = em.merge(movimentoCompraCollectionNewMovimentoCompra);
-                    if (oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra != null && !oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra.equals(usuario)) {
-                        oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra.getMovimentoCompraCollection().remove(movimentoCompraCollectionNewMovimentoCompra);
-                        oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra = em.merge(oldIdOperadorOfMovimentoCompraCollectionNewMovimentoCompra);
-                    }
-                }
-            }
             em.getTransaction().commit();
         } catch (Exception ex) {
             String msg = ex.getLocalizedMessage();
             if (msg == null || msg.length() == 0) {
-                Integer id = usuario.getIdOperador();
-                if (findUsuario(id) == null) {
-                    throw new NonexistentEntityException("The usuario with id " + id + " no longer exists.");
+                Integer id = usuario.getUsuario();
+                if (findUsuarioById(id) == null) {
+                    throw new NonexistentEntityException("O usuário com id " + id + " não existe mais.");
                 }
             }
             throw ex;
@@ -174,20 +123,21 @@ public class UsuarioJpaController implements Serializable {
             Usuario usuario;
             try {
                 usuario = em.getReference(Usuario.class, id);
-                usuario.getIdOperador();
+                usuario.getUsuario();
             } catch (EntityNotFoundException enfe) {
-                throw new NonexistentEntityException("The usuario with id " + id + " no longer exists.", enfe);
+                throw new NonexistentEntityException("O usuário com id " + id + " não existe mais.", enfe);
             }
-            Collection<MovimentoVenda> movimentoVendaCollection = usuario.getMovimentoVendaCollection();
-            for (MovimentoVenda movimentoVendaCollectionMovimentoVenda : movimentoVendaCollection) {
-                movimentoVendaCollectionMovimentoVenda.setIdOperador(null);
-                movimentoVendaCollectionMovimentoVenda = em.merge(movimentoVendaCollectionMovimentoVenda);
+
+            // Remover movimentos de venda e compra associados ao usuário
+            for (MovimentoVenda movimentoVenda : usuario.getMovimentoVendaCollection()) {
+                movimentoVenda.setUsuario(null);
+                em.merge(movimentoVenda);
             }
-            Collection<MovimentoCompra> movimentoCompraCollection = usuario.getMovimentoCompraCollection();
-            for (MovimentoCompra movimentoCompraCollectionMovimentoCompra : movimentoCompraCollection) {
-                movimentoCompraCollectionMovimentoCompra.setIdOperador(null);
-                movimentoCompraCollectionMovimentoCompra = em.merge(movimentoCompraCollectionMovimentoCompra);
+            for (MovimentoCompra movimentoCompra : usuario.getMovimentoCompraCollection()) {
+                movimentoCompra.setUsuario(null);
+                em.merge(movimentoCompra);
             }
+
             em.remove(usuario);
             em.getTransaction().commit();
         } finally {
@@ -221,7 +171,7 @@ public class UsuarioJpaController implements Serializable {
         }
     }
 
-    public Usuario findUsuario(Integer id) {
+    public Usuario findUsuarioById(Integer id) {
         EntityManager em = getEntityManager();
         try {
             return em.find(Usuario.class, id);
@@ -230,10 +180,25 @@ public class UsuarioJpaController implements Serializable {
         }
     }
 
+    public Usuario findUsuario(String login, String senha) {
+        EntityManager em = getEntityManager();
+        try {
+            // Substitua a consulta abaixo pela lógica apropriada
+            TypedQuery<Usuario> query = em.createQuery("SELECT u FROM Usuario u WHERE u.login = :login AND u.senha = :senha", Usuario.class);
+            query.setParameter("login", login);
+            query.setParameter("senha", senha);
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
     public int getUsuarioCount() {
         EntityManager em = getEntityManager();
         try {
-            CriteriaQuery cq = em.getCriteriaBuilder().createQuery();
+            CriteriaQuery<Long> cq = em.getCriteriaBuilder().createQuery(Long.class);
             Root<Usuario> rt = cq.from(Usuario.class);
             cq.select(em.getCriteriaBuilder().count(rt));
             Query q = em.createQuery(cq);
@@ -242,5 +207,21 @@ public class UsuarioJpaController implements Serializable {
             em.close();
         }
     }
-    
+    public Usuario findUsuarioByLogin(String login, String senha) {
+        EntityManager em = getEntityManager();
+        try {
+            TypedQuery<Usuario> query = em.createQuery(
+                    "SELECT u FROM Usuario u WHERE u.login = :login AND u.senha = :senha",
+                    Usuario.class
+            );
+            query.setParameter("login", login);
+            query.setParameter("senha", senha);
+            return query.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
 }

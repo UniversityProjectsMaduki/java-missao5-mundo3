@@ -95,7 +95,7 @@ public class MovimentoVenda implements Serializable {
     }
 
     public Usuario getIdOperador() {
-        return idOperador;
+        return this.idOperador;
     }
 
     public void setIdOperador(Usuario idOperador) {
@@ -126,5 +126,6 @@ public class MovimentoVenda implements Serializable {
     public String toString() {
         return "model.MovimentoVenda[ idMovimentoVenda=" + idMovimentoVenda + " ]";
     }
-    
+
+
 }

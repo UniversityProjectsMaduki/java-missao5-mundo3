@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package cadastroserver.model;
 
 import java.io.Serializable;
@@ -15,17 +11,13 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
-/**
- *
- * @author Madu
- */
 @Entity
 @Table(name = "Usuario")
 @NamedQueries({
-    @NamedQuery(name = "Usuario.findAll", query = "SELECT u FROM Usuario u"),
-    @NamedQuery(name = "Usuario.findByIdOperador", query = "SELECT u FROM Usuario u WHERE u.idOperador = :idOperador"),
-    @NamedQuery(name = "Usuario.findByNome", query = "SELECT u FROM Usuario u WHERE u.nome = :nome"),
-    @NamedQuery(name = "Usuario.findBySenha", query = "SELECT u FROM Usuario u WHERE u.senha = :senha")})
+        @NamedQuery(name = "Usuario.findAll", query = "SELECT u FROM Usuario u"),
+        @NamedQuery(name = "Usuario.findByIdOperador", query = "SELECT u FROM Usuario u WHERE u.idOperador = :idOperador"),
+        @NamedQuery(name = "Usuario.findByNome", query = "SELECT u FROM Usuario u WHERE u.nome = :nome"),
+        @NamedQuery(name = "Usuario.findBySenha", query = "SELECT u FROM Usuario u WHERE u.senha = :senha")})
 public class Usuario implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -113,5 +105,5 @@ public class Usuario implements Serializable {
     public String toString() {
         return "model.Usuario[ idOperador=" + idOperador + " ]";
     }
-    
+
 }

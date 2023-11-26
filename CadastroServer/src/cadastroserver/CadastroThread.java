@@ -54,13 +54,15 @@ public class CadastroThread extends Thread {
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Erro ao processar a solicitação: " + e.getMessage());
             e.printStackTrace();
         } finally {
             try {
                 if (outputStream != null) outputStream.close();
                 if (inputStream != null) inputStream.close();
                 if (clientSocket != null) clientSocket.close();
-            } catch (IOException e) {
+            } catch (IOException e) { // Apenas IOException deve ser capturada aqui.
+                System.err.println("Erro ao fechar recursos: " + e.getMessage());
                 e.printStackTrace();
             }
         }
